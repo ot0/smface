@@ -1,0 +1,9 @@
+<layout id="WatchFace">
+    <drawable class="Background" />
+    <label id="Week" x="center" y="10" font="Graphics.FONT_SMALL" justification="Graphics.TEXT_JUSTIFY_CENTER" color="Graphics.COLOR_WHITE" />
+    <label id="TimeLabel" x="center" y="30" font="Graphics.FONT_SMALL" justification="Graphics.TEXT_JUSTIFY_CENTER" color="Graphics.COLOR_WHITE" />
+    <label id="Battery" x="34" y="60" font="Graphics.FONT_MEDIUM" justification="Graphics.TEXT_JUSTIFY_CENTER" color="Graphics.COLOR_WHITE" />
+    <label id="Pressure" x="34" y="85" font="Graphics.FONT_TINY" justification="Graphics.TEXT_JUSTIFY_CENTER" color="Graphics.COLOR_WHITE" />
+    <label id="Heart" x="142" y="60" font="Graphics.FONT_MEDIUM" justification="Graphics.TEXT_JUSTIFY_CENTER" color="Graphics.COLOR_WHITE" />
+    <label id="Step" x="142" y="85" font="Graphics.FONT_TINY" justification="Graphics.TEXT_JUSTIFY_CENTER" color="Graphics.COLOR_WHITE" />
+</layout>
