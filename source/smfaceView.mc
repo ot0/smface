@@ -13,23 +13,25 @@ const weekTable = ["", "日", "月", "火", "水", "木", "金", "土"];
 const screenSize = 176;
 const center = 88;
 const nengo = 2018;
-const under = 108;
+const under = 114;
 
 const weatherType = [
     "快晴", "晴", "くもり", "雪", "強風", "雷雨", "あられ", "きり", "かすみ", "ひょう",
-    "雨", "雷雨", "雨", "小雨", "大雨", "小雪", "大雪", "小雨雷", "大雨雷", "くもり",
-    "雨雪", "晴",   "晴", "小雨", "大雨", "大雨", "雨", "雷雨", "きり", "ほこり",
+    "雨", "雷雨", "雨", "小雨", "大雨", "小雪", "大雪", "小雨雪", "大雨雪", "くもり",
+    "雨雪", "晴", "晴", "小雨", "大雨", "大雨", "俄雨", "俄雷雨", "きり", "ほこり",
     "きり雨", "竜巻", "煙", "氷", "砂", "大雨", "砂嵐", "火山灰", "えんむ", "良好",
-    "台風", "台風", "雪", "雷雨", "曇雨", "曇雪", "曇雷雨", "雪", "ひょう", "みぞれ",
+    "台風", "台風", "弱雪", "弱雷雨", "弱曇雨", "弱曇雪", "弱雷雨", "雪", "ひょう", "みぞれ",
     "氷雪", "薄曇", "未知"
 ];
 
 class smfaceView extends WatchUi.WatchFace {
     private var _screenBuf as BufferedBitmap?;
     private var _bufDc as Dc?;
+    private var isSleep = false;
 
     function initialize() {
         WatchFace.initialize();
+
     }
 
     // Load your resources here
@@ -49,6 +51,9 @@ class smfaceView extends WatchUi.WatchFace {
     }
 
     function drawHand(sec as Number, dc as Dc) as [Number, Number] {
+        if(isSleep){
+            return [center, center];
+        }
         var angle = sec / 60.0 * Math.PI * 2;
         var size = 80;
         var pos = [(center + Math.sin(angle)*size).toNumber(), (center - Math.cos(angle)*size).toNumber()];
@@ -115,7 +120,7 @@ class smfaceView extends WatchUi.WatchFace {
         // var pos = new Position.Location({:latitude=>35, :longitude=>135, :format=>:degrees});
         // sunrise = toTimeString(Weather.getSunrise(pos, Time.now()));
         // sunset = toTimeString(Weather.getSunset(pos, Time.now()));        
-        var topLine = Lang.format("$1$ $2$ $3$", [
+        var topLine = Lang.format("↑$1$ $2$ $3$↓", [
             sunrise, weekTable[time.day_of_week], sunset,
         ]);
         (View.findDrawableById("Week") as Text).setText(topLine);
@@ -135,13 +140,13 @@ class smfaceView extends WatchUi.WatchFace {
                 wt = toTimeString(f.forecastTime);
                 pc = f.precipitationChance != null?f.precipitationChance.toString()+"%":pc;
                 cd = f.condition != null? weatherType[f.condition]:cd;
-                tmp = f.temperature !=null? f.temperature.toString()+"℃":tmp;
+                tmp = f.temperature !=null? f.temperature.format("%2d")+"℃":tmp;
             }
             var xp = i*42+24;
-            dc.drawText(xp, 7, Graphics.FONT_XTINY, wt, Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(xp, 20, Graphics.FONT_XTINY, cd, Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(i*38+32, 33, Graphics.FONT_XTINY, tmp, Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(i*36+36, 46, Graphics.FONT_XTINY, pc, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(xp, 0, Graphics.FONT_XTINY, wt, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(xp, 14, Graphics.FONT_XTINY, cd, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(i*38+32, 28, Graphics.FONT_XTINY, tmp, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(i*35+38, 42, Graphics.FONT_XTINY, pc, Graphics.TEXT_JUSTIFY_CENTER);
         }
     }
 
@@ -149,6 +154,7 @@ class smfaceView extends WatchUi.WatchFace {
     function onUpdate(dc as Dc) as Void {
         // Get the current time and format it correctly
         //var time = System.getClockTime();
+        dc.setClip(0,0,screenSize, screenSize);
         var time = Gregorian.info(Time.now(), Time.FORMAT_SHORT);
         var act = Activity.getActivityInfo();
         var weather = Weather.getCurrentConditions();
@@ -181,26 +187,28 @@ class smfaceView extends WatchUi.WatchFace {
 
     function onPartialUpdate(dc as Dc) as Void {
         var time = Gregorian.info(Time.now(), Time.FORMAT_SHORT);
-        var act = Activity.getActivityInfo();
-        var step = ActivityMonitor.getInfo();
+        //var act = Activity.getActivityInfo();
+        //var step = ActivityMonitor.getInfo();
+        
+        dc.setClip(136, 30, 164, 46);
 
         drawTime(time);
-        drawHeart(act);
-        drawStep(step);
+        //drawHeart(act);
+        //drawStep(step);
         View.onUpdate(dc);
 
-        if(_screenBuf != null){
-            dc.drawBitmap(0,under, _screenBuf);
-        }
+        // if(_screenBuf != null){
+        //     dc.drawBitmap(0,under, _screenBuf);
+        // }
         
-        drawHand(time.sec, dc);
+        // drawHand(time.sec, dc);
         // pos[0] -=3; //針の太さ分
         // pos[1] +=3;
         // var xs = pos[0]<center?pos[0]:center;
         // var ye =  pos[1]>center?pos[1]:center;
         // dc.setClip(xs, 8, 169-xs, ye-7);
         // System.println(time.sec + ":" +xs + ":" + ye);
-        //dc.setClip(0, 0, 176, 176);
+        // dc.setClip(88, 8, 176, 88);
         
     }
 
@@ -213,10 +221,12 @@ class smfaceView extends WatchUi.WatchFace {
 
     // The user has just looked at their watch. Timers and animations may be started here.
     function onExitSleep() as Void {
+        isSleep = false;
     }
 
     // Terminate any active timers and prepare for slow updates.
     function onEnterSleep() as Void {
+        isSleep = true;
     }
 
 }
