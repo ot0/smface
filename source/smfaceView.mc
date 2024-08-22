@@ -25,8 +25,8 @@ const weatherType = [
 ];
 
 class smfaceView extends WatchUi.WatchFace {
-    private var _screenBuf as BufferedBitmap?;
-    private var _bufDc as Dc?;
+    //private var _screenBuf as BufferedBitmap?;
+    //private var _bufDc as Dc?;
     private var _isSleep = false;
     //private var handX as Array<Number>[60];
 
@@ -38,12 +38,11 @@ class smfaceView extends WatchUi.WatchFace {
 
     // Load your resources here
     function onLayout(dc as Dc) as Void {
-        setLayout(Rez.Layouts.WatchFace(dc));
-        _screenBuf = new Graphics.BufferedBitmap({
-            :width=>screenSize, :height=>screenSize-under,
-            :palette=>[Graphics.COLOR_WHITE, Graphics.COLOR_BLACK],
-        });
-        _bufDc = _screenBuf.getDc();
+        // _screenBuf = new Graphics.BufferedBitmap({
+        //     :width=>screenSize, :height=>screenSize-under,
+        //     :palette=>[Graphics.COLOR_WHITE, Graphics.COLOR_BLACK],
+        // });
+        // _bufDc = _screenBuf.getDc();
     }
 
     // Called when this View is brought to the foreground. Restore
@@ -73,19 +72,19 @@ class smfaceView extends WatchUi.WatchFace {
                 (time.year -nengo).toString(), time.month.format("%02d"), time.day.format("%02d"),
                 time.hour.format("%02d"), time.min.format("%02d"), time.sec.format("%02d")
             ]);
-        dc.drawText(center, 30, Graphics.FONT_SMALL, timeString, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(center, 25, Graphics.FONT_SMALL, timeString, Graphics.TEXT_JUSTIFY_CENTER);
     }
 
     function onSecond(dc as Dc) as Void {
         // 心拍数
         var act = Activity.getActivityInfo();
         var heart = act.currentHeartRate; //.format("%02d");
-        dc.drawText(142, 60, Graphics.FONT_MEDIUM, (heart != null?heart.format("%3d"):"---")+"拍", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(142, 55, Graphics.FONT_MEDIUM, (heart != null?heart.format("%3d"):"---")+"拍", Graphics.TEXT_JUSTIFY_CENTER);
 
         // 歩数
         var step = ActivityMonitor.getInfo();
         var st = step.steps; //.format("%02d");
-        dc.drawText(142, 85, Graphics.FONT_SMALL,(st != null?st.toString():"----")+"歩", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(142, 80, Graphics.FONT_SMALL,(st != null?st.toString():"----")+"歩", Graphics.TEXT_JUSTIFY_CENTER);
     }
 
     function toTimeString(time as Time.Moment or Null) as String {
@@ -108,18 +107,18 @@ class smfaceView extends WatchUi.WatchFace {
             sunrise = toTimeString(Weather.getSunrise(weather.observationLocationPosition, weather.observationTime));
             sunset = toTimeString(Weather.getSunset(weather.observationLocationPosition, weather.observationTime));
         }
-        var topLine = Lang.format("/$1$ $2$ $3$\\", [
+        var topLine = Lang.format("↑$1$ $2$ $3$↓", [
             sunrise, weekTable[day_of_week], sunset,
         ]);
-        dc.drawText(center, 10, Graphics.FONT_SMALL, topLine, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(center, 5, Graphics.FONT_SMALL, topLine, Graphics.TEXT_JUSTIFY_CENTER);
 
         // バッテリ
         var battery = (stats.battery + 0.5).toNumber().toString() + "%";
-        dc.drawText(34, 60, Graphics.FONT_MEDIUM, battery, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(34, 55, Graphics.FONT_MEDIUM, battery, Graphics.TEXT_JUSTIFY_CENTER);
 
         // 気圧
         var prs = act.ambientPressure; //.format("%02d");
-        dc.drawText(34, 85, Graphics.FONT_SMALL, (prs != null?(prs / 100).format("%4d"):"----")+"hPa", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(34, 80, Graphics.FONT_SMALL, (prs != null?(prs / 100).format("%4d"):"----")+"hPa", Graphics.TEXT_JUSTIFY_CENTER);
 
     }
 
