@@ -18,7 +18,7 @@ class smfaceApp extends Application.AppBase {
 
     // Return the initial view of your application here
     function getInitialView() as [Views] or [Views, InputDelegates] {
-        return [ new smfaceView() ];
+        return [ new smfaceView() , new SmfaceViewDelegate()];
     }
 
     // New app settings have been received so trigger a UI update

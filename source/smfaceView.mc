@@ -13,7 +13,7 @@ const weekTable = ["", "日", "月", "火", "水", "木", "金", "土"];
 const screenSize = 176;
 const center = 88;
 const nengo = 2018;
-const under = 114;
+const under = 112;
 
 const weatherType = [
     "快晴", "晴", "くもり", "雪", "強風", "雷雨", "あられ", "きり", "かすみ", "ひょう",
@@ -27,7 +27,9 @@ const weatherType = [
 class smfaceView extends WatchUi.WatchFace {
     private var _screenBuf as BufferedBitmap?;
     private var _bufDc as Dc?;
-    private var isSleep = false;
+    private var _isSleep = false;
+    //private var handX as Array<Number>[60];
+
 
     function initialize() {
         WatchFace.initialize();
@@ -50,8 +52,8 @@ class smfaceView extends WatchUi.WatchFace {
     function onShow() as Void {
     }
 
-    function drawHand(sec as Number, dc as Dc) as [Number, Number] {
-        if(isSleep){
+    function drawHand(dc as Dc, sec as Number) as [Number, Number] {
+        if(_isSleep){
             return [center, center];
         }
         var angle = sec / 60.0 * Math.PI * 2;
@@ -64,6 +66,28 @@ class smfaceView extends WatchUi.WatchFace {
         return pos;
     }
 
+    function drawTime(dc as Dc, time as Gregorian.Info) as Void {
+        // 日時表示
+        var timeString = Lang.format("$1$/$2$/$3$ $4$:$5$:$6$", 
+            [
+                (time.year -nengo).toString(), time.month.format("%02d"), time.day.format("%02d"),
+                time.hour.format("%02d"), time.min.format("%02d"), time.sec.format("%02d")
+            ]);
+        dc.drawText(center, 30, Graphics.FONT_SMALL, timeString, Graphics.TEXT_JUSTIFY_CENTER);
+    }
+
+    function onSecond(dc as Dc) as Void {
+        // 心拍数
+        var act = Activity.getActivityInfo();
+        var heart = act.currentHeartRate; //.format("%02d");
+        dc.drawText(142, 60, Graphics.FONT_MEDIUM, (heart != null?heart.format("%3d"):"---")+"拍", Graphics.TEXT_JUSTIFY_CENTER);
+
+        // 歩数
+        var step = ActivityMonitor.getInfo();
+        var st = step.steps; //.format("%02d");
+        dc.drawText(142, 85, Graphics.FONT_SMALL,(st != null?st.toString():"----")+"歩", Graphics.TEXT_JUSTIFY_CENTER);
+    }
+
     function toTimeString(time as Time.Moment or Null) as String {
         if(time == null){
             return "--:--";
@@ -72,115 +96,73 @@ class smfaceView extends WatchUi.WatchFace {
         return gre.hour.format("%02d") + ":" + gre.min.format("%02d");
     }
 
-    function drawTime(time as Gregorian.Info) as Void {
-        // 日時表示
-        var timeString = Lang.format("$1$/$2$/$3$ $4$:$5$:$6$", 
-            [
-                (time.year -nengo).toString(), time.month.format("%02d"), time.day.format("%02d"),
-                time.hour.format("%02d"), time.min.format("%02d"), time.sec.format("%02d")
-            ]);
-        (View.findDrawableById("TimeLabel") as Text).setText(timeString);
+    function onMimute(dc as Dc, day_of_week as Number) as Void{
+        var weather = Weather.getCurrentConditions();
+        var act = Activity.getActivityInfo();
+        var stats = System.getSystemStats();
 
-    }
-
-    function drawHeart(act as Activity.Info) as Void{
-        // 心拍数
-        var heart = act.currentHeartRate; //.format("%02d");
-        (View.findDrawableById("Heart") as Text).setText((heart != null?heart.format("%3d"):"---")+"拍");
-    }
-
-    function drawPressure(act as Activity.Info) as Void{
-        // 気圧
-        var prs = act.ambientPressure; //.format("%02d");
-        (View.findDrawableById("Pressure") as Text).setText((prs != null?(prs / 100).format("%4d"):"----")+"hPa");
-    }
-
-    function drawStep(step as ActivityMonitor.Info) as Void{
-        // 気圧
-        var st = step.steps; //.format("%02d");
-        (View.findDrawableById("Step") as Text).setText((st != null?st.toString():"----")+"歩");
-    }
-
-    function drawButtery(stats as System.Stats) {
-        // バッテリ
-        var battery = (stats.battery + 0.5).toNumber().toString() + "%";
-        (View.findDrawableById("Battery") as Text).setText(battery);
-
-    }
-
-    function drawTop(time as Gregorian.Info, weather as Weather.CurrentConditions) as Void {
-
+        // top
         var sunrise = "--:--";
         var sunset = "--:--";
-
         if(weather != null && weather.observationLocationPosition != null){
             sunrise = toTimeString(Weather.getSunrise(weather.observationLocationPosition, weather.observationTime));
             sunset = toTimeString(Weather.getSunset(weather.observationLocationPosition, weather.observationTime));
         }
-        // var pos = new Position.Location({:latitude=>35, :longitude=>135, :format=>:degrees});
-        // sunrise = toTimeString(Weather.getSunrise(pos, Time.now()));
-        // sunset = toTimeString(Weather.getSunset(pos, Time.now()));        
-        var topLine = Lang.format("↑$1$ $2$ $3$↓", [
-            sunrise, weekTable[time.day_of_week], sunset,
+        var topLine = Lang.format("/$1$ $2$ $3$\\", [
+            sunrise, weekTable[day_of_week], sunset,
         ]);
-        (View.findDrawableById("Week") as Text).setText(topLine);
+        dc.drawText(center, 10, Graphics.FONT_SMALL, topLine, Graphics.TEXT_JUSTIFY_CENTER);
+
+        // バッテリ
+        var battery = (stats.battery + 0.5).toNumber().toString() + "%";
+        dc.drawText(34, 60, Graphics.FONT_MEDIUM, battery, Graphics.TEXT_JUSTIFY_CENTER);
+
+        // 気圧
+        var prs = act.ambientPressure; //.format("%02d");
+        dc.drawText(34, 85, Graphics.FONT_SMALL, (prs != null?(prs / 100).format("%4d"):"----")+"hPa", Graphics.TEXT_JUSTIFY_CENTER);
 
     }
 
-    function drawWeather(dc as Dc) as Void {
+    function drawWeather(dc as Dc, offset as Number) as Void {
         // 天気
         var forecast = Weather.getHourlyForecast();
-        for(var i=0; i<4; i++){
-            var wt = "--:--";
+        for(var i=0; i<5; i++){
+            var wt = "--時";
             var pc = "--%";
             var cd = "--";
             var tmp = "--℃";
+            var wind = "--m";
             if(forecast != null && i<forecast.size()){
                 var f = forecast[i];
-                wt = toTimeString(f.forecastTime);
+                wt = Gregorian.info(f.forecastTime, Time.FORMAT_SHORT).hour.toString() + "時";
                 pc = f.precipitationChance != null?f.precipitationChance.toString()+"%":pc;
                 cd = f.condition != null? weatherType[f.condition]:cd;
                 tmp = f.temperature !=null? f.temperature.format("%2d")+"℃":tmp;
+                wind = f.windSpeed!=null? f.windSpeed.format("%2d")+"m":tmp;
             }
-            var xp = i*42+24;
-            dc.drawText(xp, 0, Graphics.FONT_XTINY, wt, Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(xp, 14, Graphics.FONT_XTINY, cd, Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(i*38+32, 28, Graphics.FONT_XTINY, tmp, Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(i*35+38, 42, Graphics.FONT_XTINY, pc, Graphics.TEXT_JUSTIFY_CENTER);
+            var xp = i*35+19;
+            dc.drawText(xp, -1+offset, Graphics.FONT_XTINY, wt, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(i*32+25, 24+offset, Graphics.FONT_XTINY, tmp, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(i*29+31, 36+offset, Graphics.FONT_XTINY, pc, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(i*24+41, 49+offset, Graphics.FONT_XTINY, wind, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(xp, 11+offset, Graphics.FONT_XTINY, cd, Graphics.TEXT_JUSTIFY_CENTER);
         }
     }
 
     // Update the view
     function onUpdate(dc as Dc) as Void {
-        // Get the current time and format it correctly
-        //var time = System.getClockTime();
-        dc.setClip(0,0,screenSize, screenSize);
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
+        dc.clear();
+
         var time = Gregorian.info(Time.now(), Time.FORMAT_SHORT);
-        var act = Activity.getActivityInfo();
-        var weather = Weather.getCurrentConditions();
-        var stats = System.getSystemStats();
-        var step = ActivityMonitor.getInfo();
 
-        drawTop(time, weather);
-        drawButtery(stats);
-        drawPressure(act);
+        onMimute(dc, time.day_of_week);
+        drawWeather(dc, under);
 
-        drawTime(time);
-        drawHeart(act);
-        drawStep(step);
-        View.onUpdate(dc);
-
-        if(_bufDc != null && _screenBuf != null){
-            //_bufDc.clear(); //clear はシンボルエラー
-            _bufDc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_WHITE);
-            _bufDc.fillRectangle(0, 0, screenSize, screenSize-under);
-
-            _bufDc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-            drawWeather(_bufDc);
-            dc.drawBitmap(0, under, _screenBuf);
-        }
-
-        drawHand(time.sec, dc);
+        onSecond(dc);
+        drawTime(dc, time);
+        
+        drawHand(dc, time.sec);
         // dc.drawText(20, 90, Graphics.FONT_XTINY, weatherType[time.sec % 53], Graphics.TEXT_JUSTIFY_CENTER);
         
     }
@@ -190,12 +172,11 @@ class smfaceView extends WatchUi.WatchFace {
         //var act = Activity.getActivityInfo();
         //var step = ActivityMonitor.getInfo();
         
-        dc.setClip(136, 30, 164, 46);
+        dc.setClip(136, 25, 164, 41);
 
-        drawTime(time);
+        drawTime(dc, time);
         //drawHeart(act);
         //drawStep(step);
-        View.onUpdate(dc);
 
         // if(_screenBuf != null){
         //     dc.drawBitmap(0,under, _screenBuf);
@@ -221,12 +202,22 @@ class smfaceView extends WatchUi.WatchFace {
 
     // The user has just looked at their watch. Timers and animations may be started here.
     function onExitSleep() as Void {
-        isSleep = false;
+        _isSleep = false;
     }
 
     // Terminate any active timers and prepare for slow updates.
     function onEnterSleep() as Void {
-        isSleep = true;
+        _isSleep = true;
     }
 
+}
+
+class SmfaceViewDelegate extends WatchUi.WatchFaceDelegate {
+    function initialize() {
+        WatchFaceDelegate.initialize();
+    }
+    function onPowerBudgetExceeded(powerInfo) as Void{
+        System.println(powerInfo.executionTimeAverage);
+        System.println(powerInfo.executionTimeLimit);
+    }
 }
