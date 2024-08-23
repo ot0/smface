@@ -7,6 +7,7 @@ import Toybox.Activity;
 import Toybox.ActivityMonitor;
 import Toybox.Time;
 import Toybox.Time.Gregorian;
+import Toybox.SensorHistory;
 import Toybox.Weather;
 
 const weekTable = ["", "日", "月", "火", "水", "木", "金", "土"];
@@ -25,24 +26,41 @@ const weatherType = [
 ];
 
 class smfaceView extends WatchUi.WatchFace {
-    //private var _screenBuf as BufferedBitmap?;
-    //private var _bufDc as Dc?;
-    private var _isSleep = false;
-    //private var handX as Array<Number>[60];
+    private var _screenBuf as BufferedBitmap?;
+    private var _bufDc as Dc?;
+    private var handX as Array<Number>?;
+    private var handY as Array<Number>?;
 
 
     function initialize() {
         WatchFace.initialize();
 
+        handX = new Array<Number>[60];
+        handY = new Array<Number>[60];
+        var size = 80;
+        for(var i=0; i<60; i++){
+            var angle = i / 60.0 * Math.PI * 2;
+            handX[i] = (center + Math.sin(angle)*size).toNumber();
+            handY[i] = (center - Math.cos(angle)*size).toNumber();
+        }
+
+        _screenBuf = new Graphics.BufferedBitmap({
+            :width=>screenSize, :height=>screenSize,
+            :palette=>[Graphics.COLOR_BLACK, Graphics.COLOR_WHITE],
+        });
+        _bufDc = _screenBuf.getDc();
+        _bufDc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_WHITE);
+        _bufDc.drawRectangle(0, 0, 176, 176);
+        _bufDc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
+
     }
 
     // Load your resources here
     function onLayout(dc as Dc) as Void {
-        // _screenBuf = new Graphics.BufferedBitmap({
-        //     :width=>screenSize, :height=>screenSize-under,
-        //     :palette=>[Graphics.COLOR_WHITE, Graphics.COLOR_BLACK],
-        // });
-        // _bufDc = _screenBuf.getDc();
+        // System.println(dc.getFontHeight(Graphics.FONT_XTINY)); //14
+        // System.println(dc.getFontHeight(Graphics.FONT_TINY)); //19
+        // System.println(dc.getFontHeight(Graphics.FONT_SMALL)); //20
+        // System.println(dc.getFontHeight(Graphics.FONT_MEDIUM)); //22
     }
 
     // Called when this View is brought to the foreground. Restore
@@ -51,40 +69,38 @@ class smfaceView extends WatchUi.WatchFace {
     function onShow() as Void {
     }
 
-    function drawHand(dc as Dc, sec as Number) as [Number, Number] {
-        if(_isSleep){
-            return [center, center];
-        }
-        var angle = sec / 60.0 * Math.PI * 2;
-        var size = 80;
-        var pos = [(center + Math.sin(angle)*size).toNumber(), (center - Math.cos(angle)*size).toNumber()];
+    function drawHand(dc as Dc, sec as Number) as Void {
         dc.setPenWidth(3);
-        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-        dc.drawLine(center, center, pos[0], pos[1]);
+        // var angle = sec / 60.0 * Math.PI * 2;
+        // var size = 80;
+        // var pos = [(center + Math.sin(angle)*size).toNumber(), (center - Math.cos(angle)*size).toNumber()];
+        // dc.drawLine(center, center, pos[0], pos[1]);
+        dc.drawLine(center, center, handX[sec], handY[sec]);
         //System.println(width);
-        return pos;
     }
 
     function drawTime(dc as Dc, time as Gregorian.Info) as Void {
         // 日時表示
-        var timeString = Lang.format("$1$/$2$/$3$ $4$:$5$:$6$", 
+        var timeString = Lang.format("$1$/$2$/$3$ $4$:$5$:", 
             [
                 (time.year -nengo).toString(), time.month.format("%02d"), time.day.format("%02d"),
-                time.hour.format("%02d"), time.min.format("%02d"), time.sec.format("%02d")
+                time.hour.format("%02d"), time.min.format("%02d"),
             ]);
-        dc.drawText(center, 25, Graphics.FONT_SMALL, timeString, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(147, 25, Graphics.FONT_SMALL, timeString, Graphics.TEXT_JUSTIFY_RIGHT);
     }
 
-    function onSecond(dc as Dc) as Void {
+    function onSecond(dc as Dc, sec as Number) as Void {
+        // 秒
+        dc.drawText(147, 25, Graphics.FONT_SMALL, sec.format("%02d"), Graphics.TEXT_JUSTIFY_LEFT);
+
         // 心拍数
-        var act = Activity.getActivityInfo();
-        var heart = act.currentHeartRate; //.format("%02d");
-        dc.drawText(142, 55, Graphics.FONT_MEDIUM, (heart != null?heart.format("%3d"):"---")+"拍", Graphics.TEXT_JUSTIFY_CENTER);
+        var heart = Activity.getActivityInfo().currentHeartRate;
+        dc.drawText(142, 46, Graphics.FONT_MEDIUM, (heart != null?heart.format("%3d"):"---")+"拍", Graphics.TEXT_JUSTIFY_CENTER);
 
         // 歩数
-        var step = ActivityMonitor.getInfo();
-        var st = step.steps; //.format("%02d");
-        dc.drawText(142, 80, Graphics.FONT_SMALL,(st != null?st.toString():"----")+"歩", Graphics.TEXT_JUSTIFY_CENTER);
+        var st = ActivityMonitor.getInfo().steps;
+        dc.drawText(142, 68, Graphics.FONT_SMALL,(st != null?st.toString():"----")+"歩", Graphics.TEXT_JUSTIFY_CENTER);
+
     }
 
     function toTimeString(time as Time.Moment or Null) as String {
@@ -99,6 +115,7 @@ class smfaceView extends WatchUi.WatchFace {
         var weather = Weather.getCurrentConditions();
         var act = Activity.getActivityInfo();
         var stats = System.getSystemStats();
+        var device = System.getDeviceSettings();
 
         // top
         var sunrise = "--:--";
@@ -113,13 +130,35 @@ class smfaceView extends WatchUi.WatchFace {
         dc.drawText(center, 5, Graphics.FONT_SMALL, topLine, Graphics.TEXT_JUSTIFY_CENTER);
 
         // バッテリ
-        var battery = (stats.battery + 0.5).toNumber().toString() + "%";
-        dc.drawText(34, 55, Graphics.FONT_MEDIUM, battery, Graphics.TEXT_JUSTIFY_CENTER);
+        var battery = (stats.battery + 0.5).format("%d") + "%";
+        dc.drawText(44, 46, Graphics.FONT_MEDIUM, battery, Graphics.TEXT_JUSTIFY_RIGHT);
+
+        var inDay = (stats.batteryInDays);
+        dc.drawText(54, 48, Graphics.FONT_TINY, (inDay != null?inDay.format("%d"):"--") + "日", Graphics.TEXT_JUSTIFY_LEFT);
 
         // 気圧
         var prs = act.ambientPressure; //.format("%02d");
-        dc.drawText(34, 80, Graphics.FONT_SMALL, (prs != null?(prs / 100).format("%4d"):"----")+"hPa", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(34, 68, Graphics.FONT_SMALL, (prs != null?(prs / 100).format("%4d"):"----")+"hPa", Graphics.TEXT_JUSTIFY_CENTER);
 
+        // 通知
+        var notifiy = device.notificationCount;
+        dc.drawText(34, 89, Graphics.FONT_SMALL, (notifiy != null?notifiy.toString():"-") + "通", Graphics.TEXT_JUSTIFY_CENTER);
+
+        // ストレス
+        var iter = SensorHistory.getStressHistory({});
+        var stress = "--st";
+        var st = iter.next();
+        while (st != null){
+            if(st.data != null){
+                stress = st.data.format("%d") + "st";
+                break;
+            }
+            st = iter.next();
+        }
+        dc.drawText(142, 89, Graphics.FONT_SMALL, stress, Graphics.TEXT_JUSTIFY_CENTER);
+
+
+        //dc.drawCircle(88,88,80);
     }
 
     function drawWeather(dc as Dc, offset as Number) as Void {
@@ -150,16 +189,22 @@ class smfaceView extends WatchUi.WatchFace {
 
     // Update the view
     function onUpdate(dc as Dc) as Void {
-        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-        dc.clear();
-
         var time = Gregorian.info(Time.now(), Time.FORMAT_SHORT);
 
-        onMimute(dc, time.day_of_week);
-        drawWeather(dc, under);
+        // _bufDc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_WHITE);
+        // _bufDc.drawRectangle(0, 0, screenSize, screenSize);
+        // _bufDc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
 
-        onSecond(dc);
-        drawTime(dc, time);
+        onMimute(_bufDc, time.day_of_week);
+        drawWeather(_bufDc, under);
+        drawTime(_bufDc, time);
+
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
+        dc.setClip(0, 0, 176, 176);
+
+        dc.drawBitmap(0, 0, _screenBuf);
+
+        onSecond(dc, time.sec);
         
         drawHand(dc, time.sec);
         // dc.drawText(20, 90, Graphics.FONT_XTINY, weatherType[time.sec % 53], Graphics.TEXT_JUSTIFY_CENTER);
@@ -167,28 +212,22 @@ class smfaceView extends WatchUi.WatchFace {
     }
 
     function onPartialUpdate(dc as Dc) as Void {
-        var time = Gregorian.info(Time.now(), Time.FORMAT_SHORT);
-        //var act = Activity.getActivityInfo();
-        //var step = ActivityMonitor.getInfo();
+        var sec = System.getClockTime().sec;
         
-        dc.setClip(136, 25, 164, 41);
+        if(sec>45){
+            dc.setClip(handX[sec-1]-1, 8, 170, 89);
+        }else if(sec>30){
+            dc.setClip(handX[sec]-1, 8, 170, handY[sec-1]+1);
+        }else if(sec>15){
+            dc.setClip(87, 8, 170, handY[sec]+1);
+        }else{
+            dc.setClip(87, 8, 170, 89);
+        }
 
-        drawTime(dc, time);
-        //drawHeart(act);
-        //drawStep(step);
+        dc.drawBitmap(0, 0, _screenBuf);
 
-        // if(_screenBuf != null){
-        //     dc.drawBitmap(0,under, _screenBuf);
-        // }
-        
-        // drawHand(time.sec, dc);
-        // pos[0] -=3; //針の太さ分
-        // pos[1] +=3;
-        // var xs = pos[0]<center?pos[0]:center;
-        // var ye =  pos[1]>center?pos[1]:center;
-        // dc.setClip(xs, 8, 169-xs, ye-7);
-        // System.println(time.sec + ":" +xs + ":" + ye);
-        // dc.setClip(88, 8, 176, 88);
+        onSecond(dc, sec);        
+        drawHand(dc, sec);
         
     }
 
@@ -201,12 +240,10 @@ class smfaceView extends WatchUi.WatchFace {
 
     // The user has just looked at their watch. Timers and animations may be started here.
     function onExitSleep() as Void {
-        _isSleep = false;
     }
 
     // Terminate any active timers and prepare for slow updates.
     function onEnterSleep() as Void {
-        _isSleep = true;
     }
 
 }
