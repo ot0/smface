@@ -14,7 +14,6 @@ const weekTable = ["", "日", "月", "火", "水", "木", "金", "土"];
 const screenSize = 176;
 const center = 88;
 const nengo = 2018;
-const under = 112;
 
 const weatherType = [
     "快晴", "晴", "くもり", "雪", "強風", "雷雨", "あられ", "きり", "かすみ", "ひょう",
@@ -86,20 +85,20 @@ class smfaceView extends WatchUi.WatchFace {
                 (time.year -nengo).toString(), time.month.format("%02d"), time.day.format("%02d"),
                 time.hour.format("%02d"), time.min.format("%02d"),
             ]);
-        dc.drawText(147, 25, Graphics.FONT_SMALL, timeString, Graphics.TEXT_JUSTIFY_RIGHT);
+        dc.drawText(147, 24, Graphics.FONT_SMALL, timeString, Graphics.TEXT_JUSTIFY_RIGHT);
     }
 
     function onSecond(dc as Dc, sec as Number) as Void {
         // 秒
-        dc.drawText(147, 25, Graphics.FONT_SMALL, sec.format("%02d"), Graphics.TEXT_JUSTIFY_LEFT);
+        dc.drawText(147, 24, Graphics.FONT_SMALL, sec.format("%02d"), Graphics.TEXT_JUSTIFY_LEFT);
 
         // 心拍数
         var heart = Activity.getActivityInfo().currentHeartRate;
-        dc.drawText(142, 46, Graphics.FONT_MEDIUM, (heart != null?heart.format("%3d"):"---")+"拍", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(142, 45, Graphics.FONT_MEDIUM, (heart != null?heart.format("%3d"):"---")+"拍", Graphics.TEXT_JUSTIFY_CENTER);
 
         // 歩数
         var st = ActivityMonitor.getInfo().steps;
-        dc.drawText(142, 68, Graphics.FONT_SMALL,(st != null?st.toString():"----")+"歩", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(142, 66, Graphics.FONT_SMALL,(st != null?st.toString():"----")+"歩", Graphics.TEXT_JUSTIFY_CENTER);
 
     }
 
@@ -127,22 +126,22 @@ class smfaceView extends WatchUi.WatchFace {
         var topLine = Lang.format("↑$1$ $2$ $3$↓", [
             sunrise, weekTable[day_of_week], sunset,
         ]);
-        dc.drawText(center, 5, Graphics.FONT_SMALL, topLine, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(center, 4, Graphics.FONT_SMALL, topLine, Graphics.TEXT_JUSTIFY_CENTER);
 
         // バッテリ
         var battery = (stats.battery + 0.5).format("%d") + "%";
-        dc.drawText(44, 46, Graphics.FONT_MEDIUM, battery, Graphics.TEXT_JUSTIFY_RIGHT);
+        dc.drawText(44, 45, Graphics.FONT_MEDIUM, battery, Graphics.TEXT_JUSTIFY_RIGHT);
 
         var inDay = (stats.batteryInDays);
-        dc.drawText(54, 48, Graphics.FONT_TINY, (inDay != null?inDay.format("%d"):"--") + "日", Graphics.TEXT_JUSTIFY_LEFT);
+        dc.drawText(54, 47, Graphics.FONT_TINY, (inDay != null?inDay.format("%d"):"--") + "日", Graphics.TEXT_JUSTIFY_LEFT);
 
         // 気圧
         var prs = act.ambientPressure; //.format("%02d");
-        dc.drawText(34, 68, Graphics.FONT_SMALL, (prs != null?(prs / 100).format("%4d"):"----")+"hPa", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(34, 66, Graphics.FONT_SMALL, (prs != null?(prs / 100).format("%4d"):"----")+"hPa", Graphics.TEXT_JUSTIFY_CENTER);
 
         // 通知
         var notifiy = device.notificationCount;
-        dc.drawText(34, 89, Graphics.FONT_SMALL, (notifiy != null?notifiy.toString():"-") + "通", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(34, 86, Graphics.FONT_SMALL, (notifiy != null?notifiy.toString():"-") + "通", Graphics.TEXT_JUSTIFY_CENTER);
 
         // ストレス
         var iter = SensorHistory.getStressHistory({});
@@ -155,7 +154,7 @@ class smfaceView extends WatchUi.WatchFace {
             }
             st = iter.next();
         }
-        dc.drawText(142, 89, Graphics.FONT_SMALL, stress, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(142, 87, Graphics.FONT_SMALL, stress, Graphics.TEXT_JUSTIFY_CENTER);
 
 
         //dc.drawCircle(88,88,80);
@@ -180,9 +179,9 @@ class smfaceView extends WatchUi.WatchFace {
             }
             var xp = i*35+19;
             dc.drawText(xp, -1+offset, Graphics.FONT_XTINY, wt, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(i*24+41, 50+offset, Graphics.FONT_XTINY, wind, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(i*29+31, 37+offset, Graphics.FONT_XTINY, pc, Graphics.TEXT_JUSTIFY_CENTER);
             dc.drawText(i*32+25, 24+offset, Graphics.FONT_XTINY, tmp, Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(i*29+31, 36+offset, Graphics.FONT_XTINY, pc, Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(i*24+41, 49+offset, Graphics.FONT_XTINY, wind, Graphics.TEXT_JUSTIFY_CENTER);
             dc.drawText(xp, 11+offset, Graphics.FONT_XTINY, cd, Graphics.TEXT_JUSTIFY_CENTER);
         }
     }
@@ -196,7 +195,7 @@ class smfaceView extends WatchUi.WatchFace {
         // _bufDc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
 
         onMimute(_bufDc, time.day_of_week);
-        drawWeather(_bufDc, under);
+        drawWeather(_bufDc, 107);
         drawTime(_bufDc, time);
 
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
@@ -223,6 +222,7 @@ class smfaceView extends WatchUi.WatchFace {
         }else{
             dc.setClip(87, 8, 170, 89);
         }
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
 
         dc.drawBitmap(0, 0, _screenBuf);
 
