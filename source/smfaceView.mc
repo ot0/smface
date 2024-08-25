@@ -11,13 +11,13 @@ import Toybox.SensorHistory;
 import Toybox.Weather;
 
 const weekTable = ["", "日", "月", "火", "水", "木", "金", "土"];
-const screenSize = 176;
-const center = 88;
 const nengo = 2018;
+const hand = 82;
+const centerY = 86;
 
 const weatherType = [
-    "快晴", "晴", "くもり", "雪", "強風", "雷雨", "あられ", "きり", "かすみ", "ひょう",
-    "雨", "雷雨", "雨", "小雨", "大雨", "小雪", "大雪", "小雨雪", "大雨雪", "くもり",
+    "快晴", "晴", "曇り", "雪", "強風", "雷雨", "あられ", "きり", "かすみ", "ひょう",
+    "雨", "雷雨", "雨", "小雨", "大雨", "小雪", "大雪", "小雨雪", "大雨雪", "曇り",
     "雨雪", "晴", "晴", "小雨", "大雨", "大雨", "俄雨", "俄雷雨", "きり", "ほこり",
     "きり雨", "竜巻", "煙", "氷", "砂", "大雨", "砂嵐", "火山灰", "えんむ", "良好",
     "台風", "台風", "弱雪", "弱雷雨", "弱曇雨", "弱曇雪", "弱雷雨", "雪", "ひょう", "みぞれ",
@@ -36,20 +36,19 @@ class smfaceView extends WatchUi.WatchFace {
 
         handX = new Array<Number>[60];
         handY = new Array<Number>[60];
-        var size = 80;
         for(var i=0; i<60; i++){
             var angle = i / 60.0 * Math.PI * 2;
-            handX[i] = (center + Math.sin(angle)*size).toNumber();
-            handY[i] = (center - Math.cos(angle)*size).toNumber();
+            handX[i] = (88 + Math.sin(angle)*hand).toNumber();
+            handY[i] = (centerY - Math.cos(angle)*hand).toNumber();
         }
 
         _screenBuf = new Graphics.BufferedBitmap({
-            :width=>screenSize, :height=>screenSize,
+            :width=>172, :height=>168,
             :palette=>[Graphics.COLOR_BLACK, Graphics.COLOR_WHITE],
         });
         _bufDc = _screenBuf.getDc();
         _bufDc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_WHITE);
-        _bufDc.drawRectangle(0, 0, 176, 176);
+        _bufDc.fillRectangle(0, 0, 174, 168);
         _bufDc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
 
     }
@@ -60,6 +59,8 @@ class smfaceView extends WatchUi.WatchFace {
         // System.println(dc.getFontHeight(Graphics.FONT_TINY)); //19
         // System.println(dc.getFontHeight(Graphics.FONT_SMALL)); //20
         // System.println(dc.getFontHeight(Graphics.FONT_MEDIUM)); //22
+        dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);        
+        dc.clear();
     }
 
     // Called when this View is brought to the foreground. Restore
@@ -70,12 +71,7 @@ class smfaceView extends WatchUi.WatchFace {
 
     function drawHand(dc as Dc, sec as Number) as Void {
         dc.setPenWidth(3);
-        // var angle = sec / 60.0 * Math.PI * 2;
-        // var size = 80;
-        // var pos = [(center + Math.sin(angle)*size).toNumber(), (center - Math.cos(angle)*size).toNumber()];
-        // dc.drawLine(center, center, pos[0], pos[1]);
-        dc.drawLine(center, center, handX[sec], handY[sec]);
-        //System.println(width);
+        dc.drawLine(88, centerY, handX[sec], handY[sec]);
     }
 
     function drawTime(dc as Dc, time as Gregorian.Info) as Void {
@@ -85,20 +81,20 @@ class smfaceView extends WatchUi.WatchFace {
                 (time.year -nengo).toString(), time.month.format("%02d"), time.day.format("%02d"),
                 time.hour.format("%02d"), time.min.format("%02d"),
             ]);
-        dc.drawText(147, 24, Graphics.FONT_SMALL, timeString, Graphics.TEXT_JUSTIFY_RIGHT);
+        dc.drawText(138, 20, Graphics.FONT_SMALL, timeString, Graphics.TEXT_JUSTIFY_RIGHT);
     }
 
     function onSecond(dc as Dc, sec as Number) as Void {
         // 秒
-        dc.drawText(147, 24, Graphics.FONT_SMALL, sec.format("%02d"), Graphics.TEXT_JUSTIFY_LEFT);
+        dc.drawText(140, 20, Graphics.FONT_SMALL, sec.format("%02d"), Graphics.TEXT_JUSTIFY_LEFT);
 
         // 心拍数
         var heart = Activity.getActivityInfo().currentHeartRate;
-        dc.drawText(142, 45, Graphics.FONT_MEDIUM, (heart != null?heart.format("%3d"):"---")+"拍", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(174, 40, Graphics.FONT_MEDIUM, (heart != null?heart.format("%3d"):"---")+"拍", Graphics.TEXT_JUSTIFY_RIGHT);
 
         // 歩数
         var st = ActivityMonitor.getInfo().steps;
-        dc.drawText(142, 66, Graphics.FONT_SMALL,(st != null?st.toString():"----")+"歩", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(174, 62, Graphics.FONT_SMALL,(st != null?st.toString():"----")+"歩", Graphics.TEXT_JUSTIFY_RIGHT);
 
     }
 
@@ -123,38 +119,52 @@ class smfaceView extends WatchUi.WatchFace {
             sunrise = toTimeString(Weather.getSunrise(weather.observationLocationPosition, weather.observationTime));
             sunset = toTimeString(Weather.getSunset(weather.observationLocationPosition, weather.observationTime));
         }
-        var topLine = Lang.format("↑$1$ $2$ $3$↓", [
+        var topLine = Lang.format("$1$ $2$ $3$", [
             sunrise, weekTable[day_of_week], sunset,
         ]);
-        dc.drawText(center, 4, Graphics.FONT_SMALL, topLine, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(86, 0, Graphics.FONT_SMALL, topLine, Graphics.TEXT_JUSTIFY_CENTER);
 
         // バッテリ
         var battery = (stats.battery + 0.5).format("%d") + "%";
-        dc.drawText(44, 45, Graphics.FONT_MEDIUM, battery, Graphics.TEXT_JUSTIFY_RIGHT);
+        dc.drawText(42, 40, Graphics.FONT_MEDIUM, battery, Graphics.TEXT_JUSTIFY_RIGHT);
 
         var inDay = (stats.batteryInDays);
-        dc.drawText(54, 47, Graphics.FONT_TINY, (inDay != null?inDay.format("%d"):"--") + "日", Graphics.TEXT_JUSTIFY_LEFT);
-
-        // 気圧
-        var prs = act.ambientPressure; //.format("%02d");
-        dc.drawText(34, 66, Graphics.FONT_SMALL, (prs != null?(prs / 100).format("%4d"):"----")+"hPa", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(42, 43, Graphics.FONT_TINY, (inDay != null?inDay.format("%d"):"--") + "日", Graphics.TEXT_JUSTIFY_LEFT);
 
         // 通知
         var notifiy = device.notificationCount;
-        dc.drawText(34, 86, Graphics.FONT_SMALL, (notifiy != null?notifiy.toString():"-") + "通", Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(100, 40, Graphics.FONT_MEDIUM, (notifiy != null?notifiy.toString():"-") + "通", Graphics.TEXT_JUSTIFY_CENTER);
+
+        // 気圧
+        var prs = act.ambientPressure; //.format("%02d");
+        dc.drawText(34, 62, Graphics.FONT_SMALL, (prs != null?(prs / 100).format("%4d"):"----")+"hPa", Graphics.TEXT_JUSTIFY_CENTER);
+
+
+        // ボディバッテリ
+        var iterBb = SensorHistory.getBodyBatteryHistory({});
+        var body = "--bb";
+        var bb = iterBb.next();
+        while (bb != null){
+            if(bb.data != null){
+                body = bb.data.format("%d") + "bb";
+                break;
+            }
+            bb = iterBb.next();
+        }
+        dc.drawText(34, 82, Graphics.FONT_SMALL, body, Graphics.TEXT_JUSTIFY_CENTER);
 
         // ストレス
-        var iter = SensorHistory.getStressHistory({});
+        var iterSt = SensorHistory.getStressHistory({});
         var stress = "--st";
-        var st = iter.next();
+        var st = iterSt.next();
         while (st != null){
             if(st.data != null){
                 stress = st.data.format("%d") + "st";
                 break;
             }
-            st = iter.next();
+            st = iterSt.next();
         }
-        dc.drawText(142, 87, Graphics.FONT_SMALL, stress, Graphics.TEXT_JUSTIFY_CENTER);
+        dc.drawText(140, 82, Graphics.FONT_SMALL, stress, Graphics.TEXT_JUSTIFY_CENTER);
 
 
         //dc.drawCircle(88,88,80);
@@ -174,15 +184,15 @@ class smfaceView extends WatchUi.WatchFace {
                 wt = Gregorian.info(f.forecastTime, Time.FORMAT_SHORT).hour.toString() + "時";
                 pc = f.precipitationChance != null?f.precipitationChance.toString()+"%":pc;
                 cd = f.condition != null? weatherType[f.condition]:cd;
-                tmp = f.temperature !=null? f.temperature.format("%2d")+"℃":tmp;
-                wind = f.windSpeed!=null? f.windSpeed.format("%2d")+"m":tmp;
+                tmp = f.temperature !=null? f.temperature.format("%d")+"℃":tmp;
+                wind = f.windSpeed!=null? f.windSpeed.format("%d")+"m":wind;
             }
-            var xp = i*35+19;
-            dc.drawText(xp, -1+offset, Graphics.FONT_XTINY, wt, Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(i*24+41, 50+offset, Graphics.FONT_XTINY, wind, Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(i*29+31, 37+offset, Graphics.FONT_XTINY, pc, Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(i*32+25, 24+offset, Graphics.FONT_XTINY, tmp, Graphics.TEXT_JUSTIFY_CENTER);
-            dc.drawText(xp, 11+offset, Graphics.FONT_XTINY, cd, Graphics.TEXT_JUSTIFY_CENTER);
+            var xp = i*35+16;
+            dc.drawText(xp, 0+offset, Graphics.FONT_XTINY, wt, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(i*27+32, 52+offset, Graphics.FONT_XTINY, wind, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(i*31+24, 39+offset, Graphics.FONT_XTINY, pc, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(xp, 26+offset, Graphics.FONT_XTINY, tmp, Graphics.TEXT_JUSTIFY_CENTER);
+            dc.drawText(xp, 12+offset, Graphics.FONT_XTINY, cd, Graphics.TEXT_JUSTIFY_CENTER);
         }
     }
 
@@ -190,41 +200,52 @@ class smfaceView extends WatchUi.WatchFace {
     function onUpdate(dc as Dc) as Void {
         var time = Gregorian.info(Time.now(), Time.FORMAT_SHORT);
 
-        // _bufDc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_WHITE);
-        // _bufDc.drawRectangle(0, 0, screenSize, screenSize);
-        // _bufDc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
+        //_bufDc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_WHITE);
+        _bufDc.setColor(Graphics.COLOR_BLACK, Graphics.COLOR_BLACK);
+        _bufDc.fillRectangle(0, 0, 174, 168);
+        _bufDc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
 
         onMimute(_bufDc, time.day_of_week);
-        drawWeather(_bufDc, 107);
+        drawWeather(_bufDc, 102);
         drawTime(_bufDc, time);
 
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
-        dc.setClip(0, 0, 176, 176);
+        dc.setClip(2, 0, 174, 168);
 
-        dc.drawBitmap(0, 0, _screenBuf);
+        dc.drawBitmap(2, 0, _screenBuf);
 
         onSecond(dc, time.sec);
         
         drawHand(dc, time.sec);
-        // dc.drawText(20, 90, Graphics.FONT_XTINY, weatherType[time.sec % 53], Graphics.TEXT_JUSTIFY_CENTER);
         
     }
 
     function onPartialUpdate(dc as Dc) as Void {
         var sec = System.getClockTime().sec;
         
+        var of = centerY-hand;
+        var ou = 88+hand;
         if(sec>45){
-            dc.setClip(handX[sec-1]-1, 8, 170, 89);
+            //46-59
+            var x = handX[sec-1]-1;
+            dc.setClip(x, of, 160-x, hand+2);
+            //dc.setClip(handX[sec-1]-1, 0, 176, 89);
         }else if(sec>30){
-            dc.setClip(handX[sec]-1, 8, 170, handY[sec-1]+1);
+            //31-45
+            var x = handX[sec]-1;
+            dc.setClip(x, 20, 160-x, handY[sec-1]+2-20);
         }else if(sec>15){
-            dc.setClip(87, 8, 170, handY[sec]+1);
+            //16-30
+            dc.setClip(87, 20, ou-87, handY[sec]+2-20);
         }else{
-            dc.setClip(87, 8, 170, 89);
+            //0-15
+            dc.setClip(87, of, ou-87, hand+1);
         }
+        // dc.setClip(87, 24, 168, 89);
+        
         dc.setColor(Graphics.COLOR_WHITE, Graphics.COLOR_BLACK);
 
-        dc.drawBitmap(0, 0, _screenBuf);
+        dc.drawBitmap(2, 0, _screenBuf);
 
         onSecond(dc, sec);        
         drawHand(dc, sec);
